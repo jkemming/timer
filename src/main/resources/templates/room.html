@@ -89,7 +89,7 @@
     </small>
   </div>
 
-  <div id="usage-container">
+  <div id="usage-container" class="mb-5">
     <h5>Usage</h5>
     <ul class="list-unstyled">
       <li><code>export MOB_TIMER_ROOM=[[${room.name}]]</code></li>
@@ -99,6 +99,23 @@
       <li><code>mob timer 10</code></li>
       <li><code>mob break 5</code></li>
     </ul>
+  </div>
+
+  <div>
+    <h5>Alerts</h5>
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" role="switch" id="audio-switch">
+        <span id="audio-switch-warning" class="d-none" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Autoplay permission has not been granted">⚠️</span>
+        <label class="form-check-label" for="audio-switch"></label>Audio</label>
+      </div>
+
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" role="switch" id="notification-switch">
+        <label class="form-check-label" for="notification-switch">
+          <span id="notification-switch-warning" class="d-none" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Notification permission has been denied">⚠️</span>
+          Notification
+        </label>
+      </div>
   </div>
 
 </main>
@@ -124,11 +141,76 @@
  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
   <script type="text/javascript">
-    if ("Notification" in window) {
-      Notification.requestPermission();
+    if (localStorage.getItem("notification") === null) {
+      if (Notification.permission === "granted") {
+        // Migrate users who have enabled notifications before that preference was saved to localStorage
+        localStorage.setItem("notification", "true");
+      } else {
+        localStorage.setItem("notification", "false");
+      }
     }
-  </script>
-  <script type="text/javascript">
+
+
+    const notificationSwitch = document.getElementById("notification-switch");
+    const notificationSwitchWarning = document.getElementById("notification-switch-warning");
+    new bootstrap.Tooltip(notificationSwitchWarning);
+    updateNotificationSwitch();
+    notificationSwitch.addEventListener("change", async () => {
+      notificationSwitch.disabled = true;
+      if (notificationSwitch.checked) {
+        localStorage.setItem("notification", "true");
+        // TODO Check for Notification support (https://developer.mozilla.org/en-US/docs/Web/API/Notification/requestPermission)
+        // TODO Use cross-browser compatible approach (https://developer.mozilla.org/en-US/docs/Web/API/Notifications_API/Using_the_Notifications_API)
+        await Notification.requestPermission();
+      } else {
+        localStorage.setItem("notification", "false");
+      }
+      updateNotificationSwitch();
+    });
+    function updateNotificationSwitch() {
+      // TODO Perhaps show info icon with tooltip if localStorage item is true but notification permission denied.
+      //      Should inform the user that they must manually allow notifications.
+      //      In case of permission state "default" this is not needed since the browser will ask!
+      if (localStorage.getItem("notification") === "true" && Notification.permission === "granted") {
+        notificationSwitch.checked = true;
+      } else {
+        notificationSwitch.checked = false;
+      }
+
+      if (Notification.permission === "denied") {
+        notificationSwitch.disabled = true;
+        notificationSwitchWarning.classList.remove("d-none");
+      } else {
+        notificationSwitch.disabled = false;
+        notificationSwitchWarning.classList.add("d-none");
+      }
+    }
+
+
+    const audioSwitch = document.getElementById("audio-switch");
+    const audioSwitchWarning = document.getElementById("audio-switch-warning");
+    updateAudioSwitch();
+    audioSwitch.addEventListener("change", () => {
+      audioSwitch.disabled = true;
+      if (audioSwitch.checked) {
+        localStorage.setItem("audio", "true");
+      } else {
+        localStorage.setItem("audio", "false");
+      }
+      updateAudioSwitch();
+      audioSwitch.disabled = false;
+    });
+    function updateAudioSwitch() {
+      // TODO Check if autoplay is possible (see checkAudioPlayback function below)
+      // TODO Perhaps show info icon with tooltip if localStorage item is true but autoplay is not possible.
+      //      Should inform the user that they must manually allow audio autoplay.
+      if (localStorage.getItem("audio") === "true") {
+        audioSwitch.checked = true;
+      } else {  
+        audioSwitch.checked = false;
+      }
+    }
+
 
     function hasAudioEnabled() {
       return localStorage.getItem('audio') === 'true';
