@@ -36,10 +36,7 @@
     </div>
   </div>
   <div id="notification-alert-denied" class="alert alert-warning d-none" role="alert">
-    <div class="d-flex flex-row align-items-center">
-      <span class="flex-grow-1">Notification alerts are enabled but browser permissions are denied. Please enable permissions and try again.</span>
-      <button id="notification-alert-try-again" type="button" class="btn btn-secondary text-nowrap">Try Again</button>
-    </div>
+    Notification alerts are enabled but browser permissions are denied. Please enable permissions and refresh the page.
   </div>
 </div>
 
@@ -163,13 +160,11 @@
 
     const notificationSwitch = document.getElementById("notification-switch");
     const notificationButtonRequestPermissions = document.getElementById("notification-alert-request-permissions");
-    const notificationButtonTryAgain = document.getElementById("notification-alert-try-again");
     const notificationAlertDefault = document.getElementById("notification-alert-default");
     const notificationAlertDenied = document.getElementById("notification-alert-denied");
     updateNotificationControls();
 
     notificationButtonRequestPermissions.addEventListener("click", enableNotifications);
-    notificationButtonTryAgain.addEventListener("click", updateNotificationControls);
     notificationSwitch.addEventListener("change", () => {
       if (notificationSwitch.checked) {
         enableNotifications();
