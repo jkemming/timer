@@ -25,7 +25,25 @@
 
 <main class="container">
 
-<div class="col-lg-8 mx-auto p-3 py-md-5">
+<div class="my-3">
+  <div id="audio-alert" class="alert alert-warning d-none" role="alert">
+    Autoplay permission has not been granted
+  </div>
+  <div id="notification-alert-default" class="alert alert-warning d-none" role="alert">
+    <div class="d-flex flex-row align-items-center">
+      <span class="flex-grow-1">Notification alerts are enabled but browser permissions are not granted.</span>
+      <button id="notification-alert-request-permissions" type="button" class="btn btn-secondary text-nowrap">Request Permissions</button>
+    </div>
+  </div>
+  <div id="notification-alert-denied" class="alert alert-warning d-none" role="alert">
+    <div class="d-flex flex-row align-items-center">
+      <span class="flex-grow-1">Notification alerts are enabled but browser permissions are denied. Please enable permissions.</span>
+      <button id="notification-alert-try-again" type="button" class="btn btn-secondary text-nowrap">Try Again</button>
+    </div>
+  </div>
+</div>
+
+<div class="col-lg-8 mx-auto my-5">
 
   <div class="text-center mb-3">
     <a href="/myroom" th:href="|/${room.name}|" class="text-body text-decoration-none">#[[${room.name}]]</a>
@@ -105,16 +123,12 @@
     <h5>Alerts</h5>
       <div class="form-check form-switch">
         <input class="form-check-input" type="checkbox" role="switch" id="audio-switch">
-        <span id="audio-switch-warning" class="d-none" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Autoplay permission has not been granted">⚠️</span>
-        <label class="form-check-label" for="audio-switch"></label>Audio</label>
+        <label class="form-check-label" for="audio-switch">Audio</label>
       </div>
 
       <div class="form-check form-switch">
         <input class="form-check-input" type="checkbox" role="switch" id="notification-switch">
-        <label class="form-check-label" for="notification-switch">
-          <span id="notification-switch-warning" class="d-none" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Notification permission has been denied">⚠️</span>
-          Notification
-        </label>
+        <label class="form-check-label" for="notification-switch">Notification</label>
       </div>
   </div>
 
@@ -150,46 +164,61 @@
       }
     }
 
-
     const notificationSwitch = document.getElementById("notification-switch");
-    const notificationSwitchWarning = document.getElementById("notification-switch-warning");
-    new bootstrap.Tooltip(notificationSwitchWarning);
-    updateNotificationSwitch();
-    notificationSwitch.addEventListener("change", async () => {
-      notificationSwitch.disabled = true;
+    const notificationButtonRequestPermissions = document.getElementById("notification-alert-request-permissions");
+    const notificationButtonTryAgain = document.getElementById("notification-alert-try-again");
+    const notificationAlertDefault = document.getElementById("notification-alert-default");
+    const notificationAlertDenied = document.getElementById("notification-alert-denied");
+    updateNotificationControls();
+
+    notificationButtonRequestPermissions.addEventListener("click", enableNotifications);
+    notificationButtonTryAgain.addEventListener("click", updateNotificationControls);
+    notificationSwitch.addEventListener("change", () => {
       if (notificationSwitch.checked) {
-        localStorage.setItem("notification", "true");
-        // TODO Check for Notification support (https://developer.mozilla.org/en-US/docs/Web/API/Notification/requestPermission)
-        // TODO Use cross-browser compatible approach (https://developer.mozilla.org/en-US/docs/Web/API/Notifications_API/Using_the_Notifications_API)
-        await Notification.requestPermission();
+        enableNotifications();
       } else {
-        localStorage.setItem("notification", "false");
+        disableNotifications();
       }
-      updateNotificationSwitch();
     });
-    function updateNotificationSwitch() {
-      // TODO Perhaps show info icon with tooltip if localStorage item is true but notification permission denied.
-      //      Should inform the user that they must manually allow notifications.
-      //      In case of permission state "default" this is not needed since the browser will ask!
-      if (localStorage.getItem("notification") === "true" && Notification.permission === "granted") {
-        notificationSwitch.checked = true;
-      } else {
+
+    async function enableNotifications() {
+      localStorage.setItem("notification", "true");
+      // TODO Check for Notification support (https://developer.mozilla.org/en-US/docs/Web/API/Notification/requestPermission)
+      // TODO Use cross-browser compatible approach (https://developer.mozilla.org/en-US/docs/Web/API/Notifications_API/Using_the_Notifications_API)
+      await Notification.requestPermission();
+      updateNotificationControls();
+    }
+    function disableNotifications() {
+      localStorage.setItem("notification", "false");
+      updateNotificationControls();
+    }
+    function updateNotificationControls() {
+      if (localStorage.getItem("notification") !== "true") {
         notificationSwitch.checked = false;
+        notificationAlertDefault.classList.add("d-none");
+        notificationAlertDenied.classList.add("d-none");
+        return;
       }
 
-      if (Notification.permission === "denied") {
-        notificationSwitch.disabled = true;
-        notificationSwitchWarning.classList.remove("d-none");
-      } else {
-        notificationSwitch.disabled = false;
-        notificationSwitchWarning.classList.add("d-none");
+      switch (Notification.permission) {
+        case "default":
+          notificationAlertDefault.classList.remove("d-none");
+          notificationAlertDenied.classList.add("d-none");
+          break;
+        case "denied":
+          notificationAlertDefault.classList.add("d-none");
+          notificationAlertDenied.classList.remove("d-none");
+          break;
+        case "granted":
+          notificationAlertDefault.classList.add("d-none");
+          notificationAlertDenied.classList.add("d-none");
+          break;
       }
     }
 
 
     const audioSwitch = document.getElementById("audio-switch");
-    const audioSwitchWarning = document.getElementById("audio-switch-warning");
-    updateAudioSwitch();
+    updateAudioControls();
     audioSwitch.addEventListener("change", () => {
       audioSwitch.disabled = true;
       if (audioSwitch.checked) {
@@ -197,10 +226,11 @@
       } else {
         localStorage.setItem("audio", "false");
       }
-      updateAudioSwitch();
+      updateAudioControls();
       audioSwitch.disabled = false;
     });
-    function updateAudioSwitch() {
+
+    function updateAudioControls() {
       // TODO Check if autoplay is possible (see checkAudioPlayback function below)
       // TODO Perhaps show info icon with tooltip if localStorage item is true but autoplay is not possible.
       //      Should inform the user that they must manually allow audio autoplay.
